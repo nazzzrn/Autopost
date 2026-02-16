@@ -1,0 +1,9 @@
+Backend - 
+cd backend
+.venv/Scripts/Activate
+uvicorn main:app --reload --port 8000
+
+Frontend - 
+cd frontend
+npm run dev
+
