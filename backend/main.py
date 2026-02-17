@@ -8,6 +8,16 @@ import os
 
 load_dotenv()
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
+
 from models import StartWorkflowRequest, ReviewCaptionRequest, ReviewImageRequest, ScheduleRequest, WorkflowState
 from agent_workflow import app as workflow_app, AgentState
 

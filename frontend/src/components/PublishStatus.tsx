@@ -4,9 +4,11 @@ import { CheckCircle, Loader2, Send, AlertTriangle } from 'lucide-react';
 
 const PublishStatus: React.FC = () => {
     const { publish, publish_status, isLoading, error, current_step } = useWorkflowStore();
+    const hasPublished = React.useRef(false);
 
     useEffect(() => {
-        if (current_step === "publish") {
+        if (current_step === "publish" && !hasPublished.current) {
+            hasPublished.current = true;
             publish();
         }
     }, [current_step]);
@@ -21,6 +23,14 @@ const PublishStatus: React.FC = () => {
 
             <div className="space-y-4">
                 {platforms.map((platform) => {
+                    // Check if this platform was selected in the workflow
+                    // We need to access the 'platforms' from store state
+                    const isSelected = useWorkflowStore.getState().platforms.includes(platform);
+
+                    if (!isSelected) {
+                        return null; // Don't show unselected platforms
+                    }
+
                     const status = publish_status[platform];
                     const isPublished = status && status.includes("Published"); // Simple check
                     const isFailed = status && status.includes("Failed");
@@ -49,6 +59,10 @@ const PublishStatus: React.FC = () => {
                         </div>
                     );
                 })}
+                {/* Fallback if no platforms selected? Should not happen if filtered correctly upstream */}
+                {useWorkflowStore.getState().platforms.length === 0 && (
+                    <div className="text-center text-gray-500 dark:text-gray-400 py-4">No platforms selected to publish.</div>
+                )}
             </div>
 
             {current_step === "completed" && (

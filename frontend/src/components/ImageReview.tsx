@@ -26,17 +26,12 @@ const ImageReview: React.FC = () => {
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Create a fake local URL for preview
-            const url = URL.createObjectURL(file);
-            setUploadedImage(url);
-            // In a real app, we'd upload to server here.
-            // For now, we use the blob URL or simulated path.
-            // Ideally we should base64 it to send to backend or just keep the path if local agent.
-            // Let's assume the user manually puts the path if they select "Upload" 
-            // OR we just use the blob URL for display and assume backend handles logic.
-            // For the requirements "single user system", "local workspace",
-            // We can try to get the file path but browsers block it.
-            // We will stick to the blob URL for UI and maybe send a "dummy_upload.jpg" string to backend.
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setUploadedImage(base64String);
+            };
+            reader.readAsDataURL(file);
         }
     };
 

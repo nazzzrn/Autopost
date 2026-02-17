@@ -4,6 +4,9 @@ import operator
 from datetime import datetime
 from services import GeminiService, InstagramService, FacebookService, LinkedInService, mock_generate_image
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Define the state as a TypedDict for LangGraph
 class AgentState(TypedDict):
@@ -34,6 +37,7 @@ def parse_prompt_node(state: AgentState):
     # Let's assume the prompt was passed in the initial state "topic" (wrapper).
     
     prompt = state.get("topic", "")
+    logger.info(f"parse_prompt_node: Received prompt: {prompt}")
     
     # Use Gemini to parse
     # Simple prompt to extract JSON
@@ -60,7 +64,7 @@ def parse_prompt_node(state: AgentState):
         
         return {
             "topic": data.get("topic", prompt),
-            "platforms": data.get("platforms", ["Instagram", "Facebook", "LinkedIn"]),
+            "platforms": [p.title() for p in data.get("platforms", ["Instagram", "Facebook", "LinkedIn"])],
             "schedule_time": data.get("schedule_time"),
             "current_step": "review_caption", # Next step logic handled by edges usually, but we update status
             "feedback": ""
@@ -83,8 +87,10 @@ def generate_caption_node(state: AgentState):
         # Only regenerate if not already present or if feedback exists (implies regeneration)
         # For simplicity, we just regenerate all or specific if complex logic.
         # Here: regenerate all for simplicity of the "regenerate" button.
+        logger.info(f"generate_caption_node: Generating for {platform} with feedback: {feedback}")
         caption = gemini.generate_caption(topic, platform, feedback)
         captions[platform] = caption
+        logger.debug(f"Generated caption for {platform}: {caption[:50]}...")
         
     return {
         "captions": captions,
@@ -145,6 +151,7 @@ def publish_node(state: AgentState):
             else:
                 res = "Unknown platform"
             status[p] = res
+            logger.info(f"publish_node: {p} status: {res}")
             
     return {
         "publish_status": status,
