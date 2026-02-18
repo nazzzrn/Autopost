@@ -5,6 +5,7 @@ interface WorkflowState {
     topic: string;
     platforms: string[];
     captions: Record<string, string>;
+    caption_options: Record<string, string[]>;
     image_path: string | null;
     schedule_time: string | null;
     publish_status: Record<string, string | undefined>;
@@ -19,9 +20,11 @@ interface WorkflowState {
     startWorkflow: (prompt: string) => Promise<void>;
     fetchState: () => Promise<void>;
     reviewCaption: (accepted: boolean, feedback?: string, captions?: Record<string, string>) => Promise<void>;
+    generateCaption: (platform: string, topic: string, feedback?: string) => Promise<void>;
     reviewImage: (accepted: boolean, feedback?: string, imagePath?: string) => Promise<void>;
     schedule: (time: string) => Promise<void>;
     publish: () => Promise<void>;
+    generatingPlatforms: Record<string, boolean>;
 }
 
 const API_URL = 'http://localhost:8000';
@@ -30,6 +33,7 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
     topic: "",
     platforms: [],
     captions: {},
+    caption_options: {},
     image_path: null,
     schedule_time: null,
     publish_status: {},
@@ -39,6 +43,28 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
     current_step: "prompt",
     isLoading: false,
     error: null,
+
+    generatingPlatforms: {},
+
+    generateCaption: async (platform: string, topic: string, feedback?: string) => {
+        set((state) => ({ generatingPlatforms: { ...state.generatingPlatforms, [platform]: true }, error: null }));
+        try {
+            const res = await axios.post(`${API_URL}/workflow/generate-caption`, {
+                platform,
+                topic,
+                feedback
+            });
+            set((state) => ({
+                ...res.data,
+                generatingPlatforms: { ...state.generatingPlatforms, [platform]: false }
+            }));
+        } catch (err: any) {
+            set((state) => ({
+                error: err.response?.data?.detail || err.message,
+                generatingPlatforms: { ...state.generatingPlatforms, [platform]: false }
+            }));
+        }
+    },
 
     startWorkflow: async (prompt: string) => {
         set({ isLoading: true, error: null });

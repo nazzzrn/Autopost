@@ -13,6 +13,7 @@ class AgentState(TypedDict):
     topic: str
     platforms: List[str]
     captions: dict
+    caption_options: dict
     image_path: Optional[str]
     schedule_time: Optional[str] # Store as string for JSON serialization ease in graph
     publish_status: dict
@@ -79,21 +80,28 @@ def parse_prompt_node(state: AgentState):
 
 def generate_caption_node(state: AgentState):
     captions = state.get("captions", {})
+    caption_options = state.get("caption_options", {})
     platforms = state.get("platforms", [])
     topic = state.get("topic", "")
     feedback = state.get("feedback", "")
     
     for platform in platforms:
         # Only regenerate if not already present or if feedback exists (implies regeneration)
-        # For simplicity, we just regenerate all or specific if complex logic.
-        # Here: regenerate all for simplicity of the "regenerate" button.
         logger.info(f"generate_caption_node: Generating for {platform} with feedback: {feedback}")
-        caption = gemini.generate_caption(topic, platform, feedback)
-        captions[platform] = caption
-        logger.debug(f"Generated caption for {platform}: {caption[:50]}...")
+        options = gemini.generate_caption(topic, platform, feedback)
+        
+        caption_options[platform] = options
+        
+        # Default to the first option if no caption is currently selected (or if we are regenerating)
+        # If regenerating with feedback, we likely want to overwrite the current selection with the new best option (first one)
+        if options:
+            captions[platform] = options[0]
+            
+        logger.debug(f"Generated {len(options)} options for {platform}")
         
     return {
         "captions": captions,
+        "caption_options": caption_options,
         "current_step": "review_caption",
         "feedback": "", # Clear feedback after usage
         "regenerate_count_caption": state.get("regenerate_count_caption", 0) + 1
@@ -182,9 +190,10 @@ workflow.add_node("publish", publish_node)
 
 # Defining flow
 # Start -> Parse -> Generate Caption -> Review Caption
+# Start -> Parse -> Review Caption (User triggers generation manually)
 workflow.set_entry_point("parse_prompt")
-workflow.add_edge("parse_prompt", "generate_caption")
-workflow.add_edge("generate_caption", "review_caption")
+workflow.add_edge("parse_prompt", "review_caption")
+# workflow.add_edge("generate_caption", "review_caption") # Skipped for manual trigger
 
 # Review Caption interactions are handled by interrupting the graph or conditional edges based on state input?
 # With LangGraph, we can use an 'interrupt_before' logic or just have the API update the state and resume.

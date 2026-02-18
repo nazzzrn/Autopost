@@ -5,7 +5,8 @@ from datetime import datetime
 class WorkflowState(BaseModel):
     topic: str = ""
     platforms: List[str] = []
-    captions: dict = {}  # platform -> caption
+    captions: dict = {}  # platform -> selected caption
+    caption_options: dict = {} # platform -> list of 3 options
     image_path: Optional[str] = None
     schedule_time: Optional[datetime] = None
     publish_status: dict = {} # platform -> status

@@ -19,22 +19,46 @@ class GeminiService:
             logger.error(f"GeminiService: Error configuring Gemini: {e}")
             self.model = None
 
-    def generate_caption(self, topic: str, platform: str, feedback: str = "") -> str:
+    def generate_caption(self, topic: str, platform: str, feedback: str = "") -> List[str]:
         if not self.model:
             logger.error("GeminiService: API key not configured.")
-            return "Gemini API key not configured."
+            return ["Gemini API key not configured."]
         
-        prompt = f"Create a social media caption for {platform} about '{topic}'. Return only a single caption without any other trailing text."
+        prompt = f"""
+        Create 3 distinct social media captions for {platform} about '{topic}'.
+        
+        Return ONLY a raw JSON list of strings, like this:
+        ["Caption option 1...", "Caption option 2...", "Caption option 3..."]
+        
+        Do not include markdown formatting like ```json.
+        """
         if feedback:
             prompt += f" Incorporate this feedback: {feedback}"
         
         try:
             response = self.model.generate_content(prompt)
-            logger.info(f"GeminiService: Caption generated for {platform}.")
-            return response.text
+            logger.info(f"GeminiService: Captions generated for {platform}.")
+            
+            # Clean up response
+            text = response.text.strip()
+            import re
+            import json
+            text = re.sub(r"```json", "", text)
+            text = re.sub(r"```", "", text)
+            text = text.strip()
+            
+            try:
+                captions = json.loads(text)
+                if isinstance(captions, list):
+                    return captions[:3] # Ensure max 3
+                return [text] # Fallback
+            except json.JSONDecodeError:
+                logger.warning("GeminiService: Failed to parse JSON captions, returning raw text as single option.")
+                return [text]
+                
         except Exception as e:
             logger.error(f"GeminiService: Error generating caption: {e}")
-            return f"Error generating caption: {e}"
+            return [f"Error generating caption: {e}"]
 
     def generate_image_description(self, topic: str, feedback: str = "") -> str:
         # Since we might not have direct image generation in this free tier or specific library, 

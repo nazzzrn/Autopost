@@ -3,7 +3,7 @@ import { useWorkflowStore } from '../store';
 import { Check, RefreshCw, MessageSquare } from 'lucide-react';
 
 const CaptionReview: React.FC = () => {
-    const { captions, reviewCaption, isLoading, error, regenerate_count_caption } = useWorkflowStore();
+    const { captions, caption_options, reviewCaption, isLoading, error, regenerate_count_caption, generateCaption, generatingPlatforms } = useWorkflowStore();
     const [localCaptions, setLocalCaptions] = useState(captions);
     const [feedback, setFeedback] = useState("");
     const [showReject, setShowReject] = useState(false);
@@ -57,11 +57,42 @@ const CaptionReview: React.FC = () => {
                 {Object.entries(localCaptions).map(([platform, text]) => (
                     <div key={platform} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700 transition-colors">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">{platform}</label>
-                        <textarea
-                            className="w-full p-2 border dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600 text-gray-900 dark:text-white transition-colors min-h-[100px]"
-                            value={text}
-                            onChange={(e) => handleCaptionChange(platform, e.target.value)}
-                        />
+                        {/* Caption Options or Generate Button */}
+                        {caption_options[platform] && caption_options[platform].length > 0 ? (
+                            <div className="mb-4 space-y-2">
+                                {caption_options[platform].map((opt, idx) => (
+                                    <div key={idx} className="flex items-start gap-2 p-2 border dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={() => handleCaptionChange(platform, opt)}>
+                                        <input
+                                            type="radio"
+                                            name={`caption-${platform}`}
+                                            checked={text === opt}
+                                            onChange={() => handleCaptionChange(platform, opt)}
+                                            className="mt-1"
+                                        />
+                                        <p className="text-xs text-gray-600 dark:text-gray-400 font-mono">{opt}</p>
+                                    </div>
+                                ))}
+
+                                <textarea
+                                    className="w-full p-2 border dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600 text-gray-900 dark:text-white transition-colors min-h-[100px] mt-2"
+                                    value={text || ''}
+                                    onChange={(e) => handleCaptionChange(platform, e.target.value)}
+                                    placeholder="Select an option above or write your own..."
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700/50">
+                                <p className="text-sm text-gray-500 mb-3">No captions generated yet for {platform}</p>
+                                <button
+                                    onClick={() => generateCaption(platform, useWorkflowStore.getState().topic)}
+                                    disabled={generatingPlatforms[platform]}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {generatingPlatforms[platform] ? <RefreshCw className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                                    {generatingPlatforms[platform] ? "Generating..." : "Generate Captions"}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

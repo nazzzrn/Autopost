@@ -102,6 +102,27 @@ async def start_workflow(request: StartWorkflowRequest):
 async def get_state():
     return current_state
 
+class GenerateCaptionRequest(BaseModel):
+    platform: str
+    topic: str
+    feedback: Optional[str] = None
+
+@app.post("/workflow/generate-caption")
+async def generate_caption_endpoint(req: GenerateCaptionRequest):
+    logger.info(f"API: Generating caption for {req.platform}")
+    
+    # We call the service directly
+    from agent_workflow import gemini, workflow_state
+    
+    options = gemini.generate_caption(req.topic, req.platform, req.feedback)
+    
+    # Update global state
+    workflow_state["caption_options"][req.platform] = options
+    if options:
+        workflow_state["captions"][req.platform] = options[0] # Default select first
+        
+    return workflow_state
+
 @app.post("/workflow/review-caption")
 async def review_caption(request: ReviewCaptionRequest):
     global current_state
