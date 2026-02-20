@@ -122,7 +122,7 @@ class InstagramService:
             else:
                 return "Failed: Could not upload local image to public host."
         
-        url = f"https://graph.facebook.com/v19.0/{ig_user_id}/media"
+        url = f"https://graph.facebook.com/v21.0/{ig_user_id}/media"
         payload = {
             "image_url": final_image_url,
             "caption": caption,
@@ -143,7 +143,7 @@ class InstagramService:
             logger.info(f"InstagramService: Media container created: {creation_id}")
             
             # Step 2: Publish Media
-            publish_url = f"https://graph.facebook.com/v19.0/{ig_user_id}/media_publish"
+            publish_url = f"https://graph.facebook.com/v21.0/{ig_user_id}/media_publish"
             publish_payload = {
                 "creation_id": creation_id,
                 "access_token": access_token
@@ -219,11 +219,55 @@ class FreeImageHostService:
 
 class FacebookService:
     def publish_post(self, image_path: str, caption: str, schedule_time: str) -> str:
-        logger.info(f"FacebookService: Publishing post. Image={image_path}, Caption={caption[:20]}...")
-        if not os.getenv("FACEBOOK_ACCESS_TOKEN"):
-             logger.error("FacebookService: Missing FACEBOOK_ACCESS_TOKEN")
-             return "Failed: Missing FACEBOOK_ACCESS_TOKEN"
-        return "Published to Facebook (Simulated)"
+        logger.info(f"FacebookService: Publishing post. Image={image_path}")
+        
+        access_token = os.getenv("FACEBOOK_ACCESS_TOKEN")
+        page_id = os.getenv("FACEBOOK_PAGE_ID")
+        
+        if not access_token or not page_id:
+             logger.error("FacebookService: Missing credentials")
+             return "Failed: Missing FACEBOOK_ACCESS_TOKEN or FACEBOOK_PAGE_ID"
+
+        # Handle local/blob images
+        final_image_url = image_path
+        if image_path.startswith("blob:") or image_path.startswith("data:"):
+            logger.info("FacebookService: Detected local/blob image. Uploading to public host...")
+            host_service = FreeImageHostService()
+            public_url = host_service.upload_image(image_path)
+            if public_url:
+                final_image_url = public_url
+            else:
+                return "Failed: Could not upload local image to public host."
+
+        # Facebook Page API - Post photo to feed
+        # Using /feed with link + message is often more robust than /photos for newer tokens
+        url = f"https://graph.facebook.com/v21.0/{page_id}/feed"
+        payload = {
+            "link": final_image_url,
+            "message": caption,
+            "access_token": access_token
+        }
+        
+        try:
+            response = requests.post(url, data=payload)
+            response.raise_for_status()
+            result = response.json()
+            
+            if "id" in result:
+                logger.info(f"FacebookService: Successfully published. ID: {result['id']}")
+                return "Published to Facebook"
+            else:
+                logger.error(f"FacebookService: Failed to publish. Response: {result}")
+                return "Failed: Could not publish"
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"FacebookService: API Error: {e}")
+            if e.response is not None:
+                return f"Failed: API Error - {e.response.text}"
+            return f"Failed: API Error - {str(e)}"
+        except Exception as e:
+            logger.error(f"FacebookService: Unexpected error: {e}")
+            return f"Failed: {str(e)}"
 
 class LinkedInService:
     def publish_post(self, image_path: str, caption: str, schedule_time: str) -> str:

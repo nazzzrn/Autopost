@@ -1,0 +1,8 @@
+INFO:services:FacebookService: Publishing post. Image=https://images.unsplash.com/photo-1542206395-9feb3edaa68d?w=600&q=80
+ERROR:services:FacebookService: API Error: 403 Client Error: Forbidden for url: https://graph.facebook.com/v19.0/940831709118704/feed
+DEBUG: FACEBOOK_PAGE_ID: 940831709118704
+DEBUG: TOKEN_PREFIX: EAAKg8b7QY
+DEBUG: TOKEN_SUFFIX: QIAOXvRZCA
+DEBUG: TOKEN_LENGTH: 291
+STATUS: Attempting to publish...
+RESULT: Failed: API Error - {"error":{"message":"(#200) If posting to a group, requires app being installed in the group, and \\\n          either publish_to_groups permission with user token, or both pages_read_engagement \\\n          and pages_manage_posts permission with page token; If posting to a page, \\\n          requires both pages_read_engagement and pages_manage_posts as an admin with \\\n          sufficient administrative permission","type":"OAuthException","code":200,"fbtrace_id":"AV8_4GyrVAx7oAmmteSwlgX"}}
