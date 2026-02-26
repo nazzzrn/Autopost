@@ -85,17 +85,129 @@ class GeminiService:
         except Exception as e:
             return f"Error: {e}"
 
-# Placeholder for image generation (mocking for now as Gemini Image Gen requires specific setup/API availability)
-# We will save a dummy image or use a placeholder URL.
+    def generate_image(self, topic: str, feedback: str = "") -> str:
+        if not self.model:
+            return "Gemini API key not configured."
+            
+        # Use Gemini to generate a high-quality prompt for Flux 1 Schnell
+        refinement_prompt = f"""
+        Create a concise, highly descriptive image generation prompt for Flux 1 Schnell about '{topic}'.
+        Describe the scene clearly, focusing on subjects, style, and lighting.
+        Input: {topic}
+        {f"Feedback to incorporate: {feedback}" if feedback else ""}
+        
+        Return ONLY the refined prompt text. Keep it under 100 words.
+        """
+        
+        try:
+            prompt_response = self.model.generate_content(refinement_prompt)
+            refined_prompt = prompt_response.text.strip()
+            logger.info(f"GeminiService: Refined prompt for Pixazo: {refined_prompt[:50]}...")
+            
+            # Now call Pixazo
+            pixazo = PixazoService()
+            image_url = pixazo.generate_image(refined_prompt)
+            
+            if image_url:
+                return image_url
+            
+            # Fallback
+            return mock_generate_image(f"Pixazo failed: {topic}")
+            
+        except Exception as e:
+            logger.error(f"GeminiService: Error in generate_image (Pixazo path): {e}")
+            return mock_generate_image(f"Error {e}")
+
+class PixazoService:
+    def __init__(self):
+        self.api_key = os.getenv("PIXAZO_KEY")
+        self.request_url = "https://gateway.pixazo.ai/flux-1-schnell/v1/getData"
+        self.result_url = "https://gateway.pixazo.ai/flux-1-schnell/v1/checkStatus"
+        self.secret_key = os.getenv("PIXAZO_KEY") # User snippet mentions X-Secret-Key in generic, but also Key in others. Assuming subscription key works.
+        
+    def generate_image(self, prompt: str) -> str:
+        if not self.api_key:
+            logger.error("PixazoService: Missing PIXAZO_KEY in .env")
+            return None
+            
+        headers = {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            "Ocp-Apim-Subscription-Key": self.api_key
+        }
+        
+        payload = {
+            "prompt": prompt,
+            "num_steps": 4,
+            "seed": 15,
+            "height": 512,
+            "width": 512
+        }
+        
+        try:
+            logger.info(f"PixazoService: Sending request for prompt: {prompt[:50]}...")
+            response = requests.post(self.request_url, json=payload, headers=headers, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            # Check if output is immediate
+            image_url = data.get("output")
+            if image_url:
+                logger.info(f"PixazoService: Immediate output received: {image_url}")
+                return image_url
+            
+            request_id = data.get("requestId")
+            if not request_id:
+                logger.error(f"PixazoService: No output or requestId in response: {data}")
+                return None
+                
+            logger.info(f"PixazoService: Request in progress. ID: {request_id}. Polling...")
+            
+            # Update headers for polling if needed (user snippet showed X-Secret-Key)
+            poll_headers = headers.copy()
+            if "Ocp-Apim-Subscription-Key" in poll_headers:
+                poll_headers["X-Secret-Key"] = poll_headers.pop("Ocp-Apim-Subscription-Key")
+
+            # Polling logic
+            max_attempts = 10
+            for attempt in range(max_attempts):
+                time.sleep(2) # Schnell is faster
+                logger.info(f"PixazoService: Polling status (Attempt {attempt+1}/{max_attempts})...")
+                
+                res_payload = {"requestId": request_id}
+                try:
+                    res_response = requests.post(self.result_url, json=res_payload, headers=poll_headers, timeout=30)
+                    res_response.raise_for_status()
+                    res_data = res_response.json()
+                except Exception as poll_e:
+                    logger.warning(f"PixazoService: Polling error on attempt {attempt+1}: {poll_e}")
+                    continue
+                
+                status = res_data.get("status", "").lower()
+                if status == "completed":
+                    image_url = res_data.get("output")
+                    if image_url:
+                        logger.info(f"PixazoService: Image generation completed. URL: {image_url}")
+                        return image_url
+                elif status == "failed":
+                    logger.error(f"PixazoService: Generation failed for ID {request_id}")
+                    return None
+                
+            logger.warning(f"PixazoService: Timeout reached for ID {request_id}")
+            return None
+            
+        except requests.exceptions.ConnectionError as ce:
+            logger.error(f"PixazoService: Connection Error. The machine actively refused it. Check your internet/firewall: {ce}")
+            return None
+        except Exception as e:
+            logger.error(f"PixazoService: Error: {e}")
+            return None
+
+# Placeholder for image generation fallback
 def mock_generate_image(description: str) -> str:
-    # In a real app, call DALL-E or Gemini Image endpoint if available.
-    # Here we'll return a placeholder image URL or create a solid color image.
-    # For a "full-stack application", let's return a valid placeholder URL that the frontend can display.
-    # Or generate a simple image using python PIL if needed.
-    # Let's return a placeholder URL for simplicity and robustness.
-    import urllib.parse
-    encoded_desc = urllib.parse.quote(description[:20]) # Limit length
-    return f"https://via.placeholder.com/600x400?text={encoded_desc}"
+    # Use a high-quality static image from Unsplash as a robust fallback.
+    # Placeholder URLs are often rejected by Instagram/Facebook filters.
+    logger.info(f"Using fallback image for: {description[:30]}...")
+    return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1200"
 
 
 class InstagramService:

@@ -3,7 +3,7 @@ import { useWorkflowStore } from '../store';
 import { Check, RefreshCw, Upload, Image as ImageIcon } from 'lucide-react';
 
 const ImageReview: React.FC = () => {
-    const { image_path, reviewImage, isLoading, error, regenerate_count_image } = useWorkflowStore();
+    const { image_path, topic, reviewImage, isLoading, error, regenerate_count_image, generateImage, isGeneratingImage } = useWorkflowStore();
     const [feedback, setFeedback] = useState("");
     const [showReject, setShowReject] = useState(false);
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -105,8 +105,17 @@ const ImageReview: React.FC = () => {
                 </button>
 
                 <button
+                    onClick={() => generateImage(topic)}
+                    disabled={isLoading || isGeneratingImage}
+                    className="flex items-center gap-2 px-5 py-2.5 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
+                >
+                    {isGeneratingImage ? <RefreshCw className="animate-spin" size={18} /> : <ImageIcon size={18} />}
+                    {isGeneratingImage ? "Generating..." : "Generate Image"}
+                </button>
+
+                <button
                     onClick={handleAccept}
-                    disabled={isLoading || !currentImage}
+                    disabled={isLoading || isGeneratingImage || !currentImage}
                     className="flex items-center gap-2 px-8 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md transition-all hover:scale-105 disabled:opacity-50 disabled:scale-100"
                 >
                     <Check size={18} />

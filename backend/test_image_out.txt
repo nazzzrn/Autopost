@@ -1,0 +1,18 @@
+INFO:services:GeminiService: Configured successfully.
+INFO:services:GeminiService: Generating image with Imagen 3...
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1771994686.754409   12036 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+ERROR:services:GeminiService: Error generating image: 404 models/imagen-3.0-generate-001 is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+DEBUG: API_KEY found
+STATUS: Attempting to generate image for: A futuristic city with flying cars and neon lights, high resolution, digital art style.
+Traceback (most recent call last):
+  File "C:\Users\lenovo\Desktop\AutoPost2\backend\test_image_gen.py", line 48, in <module>
+    test_image_generation()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\lenovo\Desktop\AutoPost2\backend\test_image_gen.py", line 45, in test_image_generation
+    print(f"\u274c FAILED: {result}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\lenovo\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>

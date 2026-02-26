@@ -44,6 +44,7 @@ current_state: AgentState = {
     "regenerate_count_caption": 0,
     "regenerate_count_image": 0,
     "current_step": "prompt",
+    "caption_options": {},
     "error": None
 }
 
@@ -62,38 +63,13 @@ async def start_workflow(request: StartWorkflowRequest):
         "regenerate_count_caption": 0,
         "regenerate_count_image": 0,
         "current_step": "prompt",
+        "caption_options": {},
         "error": None
     }
     
-    # Run Parse Node
-    # We can invoke specific nodes or the graph. 
-    # Let's invoke the graph partially.
+    # Run the graph. It stops at review_caption because there's no outgoing edge.
     result = workflow_app.invoke(current_state)
-    # The graph invocation above runs to END if not interrupted. 
-    # LangGraph 'checkpointer' is needed to stop. 
-    # Or strict node calling.
-    # To keep it simple with the 'node' structure in agent_workflow.py:
-    # We can rely on the fact that I hardcoded edges to flow through. 
-    # But we want to STOP at review.
-    # Since I didn't configure checkpointer in agent_workflow (requires setup),
-    # I will manually simulate the step-by-step execution by calling functions 
-    # or by using the graph output if it was designed to stop.
-    
-    # RE-DESIGN for API Control:
-    # Instead of running `workflow_app.invoke` which runs the whole thing,
-    # I'll import the nodes and run them manually based on the step.
-    # This gives fine-grained control for the "API driven" state machine.
-    
-    from agent_workflow import parse_prompt_node, generate_caption_node
-    
-    # Step 1: Parse
-    res_parse = parse_prompt_node(current_state)
-    current_state.update(res_parse)
-    
-    # Step 2: Generate Initial Captions
-    res_cap = generate_caption_node(current_state)
-    current_state.update(res_cap)
-    
+    current_state.update(result)
     current_state["current_step"] = "review_caption"
     
     return current_state
@@ -112,16 +88,16 @@ async def generate_caption_endpoint(req: GenerateCaptionRequest):
     logger.info(f"API: Generating caption for {req.platform}")
     
     # We call the service directly
-    from agent_workflow import gemini, workflow_state
+    from agent_workflow import gemini
     
     options = gemini.generate_caption(req.topic, req.platform, req.feedback)
     
     # Update global state
-    workflow_state["caption_options"][req.platform] = options
+    current_state["caption_options"][req.platform] = options
     if options:
-        workflow_state["captions"][req.platform] = options[0] # Default select first
+        current_state["captions"][req.platform] = options[0] # Default select first
         
-    return workflow_state
+    return current_state
 
 @app.post("/workflow/review-caption")
 async def review_caption(request: ReviewCaptionRequest):
@@ -146,6 +122,17 @@ async def review_caption(request: ReviewCaptionRequest):
         current_state.update(res_cap)
         current_state["current_step"] = "review_caption" # Stay here
         
+    return current_state
+
+@app.post("/workflow/generate-image")
+async def generate_image_endpoint(req: StartWorkflowRequest): # Use same schema for topic
+    global current_state
+    logger.info(f"API: Generating image for topic: {req.prompt}")
+    
+    from agent_workflow import gemini
+    image_url = gemini.generate_image(req.prompt, current_state.get("feedback", ""))
+    
+    current_state["image_path"] = image_url
     return current_state
 
 @app.post("/workflow/review-image")

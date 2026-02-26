@@ -1,0 +1,5 @@
+2026-02-26 11:52:06,867 [INFO] __main__: Using Pixazo Key: 8b0b4...07bc7
+2026-02-26 11:52:06,867 [INFO] __main__: Attempting to generate image with prompt: A majestic dragon sitting on a pile of gold, cinematic lighting, hyper-detailed, fantasy art
+2026-02-26 11:52:06,867 [INFO] services: PixazoService: Sending request for prompt: A majestic dragon sitting on a pile of gold, cinem...
+2026-02-26 11:52:10,351 [ERROR] services: PixazoService: Error: 403 Client Error: Insufficient Balance for url: https://gateway.pixazo.ai/flux-2-pro-text-to-image-799/v1/flux-2-pro-text-to-image-request
+2026-02-26 11:52:10,355 [ERROR] __main__: \u274c FAILED! Image generation failed or timed out after 3.49s

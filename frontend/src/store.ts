@@ -25,6 +25,9 @@ interface WorkflowState {
     schedule: (time: string) => Promise<void>;
     publish: () => Promise<void>;
     generatingPlatforms: Record<string, boolean>;
+    isGeneratingImage: boolean;
+    generateImage: (topic: string) => Promise<void>;
+    generateAllCaptions: () => Promise<void>;
 }
 
 const API_URL = 'http://localhost:8000';
@@ -43,8 +46,8 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
     current_step: "prompt",
     isLoading: false,
     error: null,
-
     generatingPlatforms: {},
+    isGeneratingImage: false,
 
     generateCaption: async (platform: string, topic: string, feedback?: string) => {
         set((state) => ({ generatingPlatforms: { ...state.generatingPlatforms, [platform]: true }, error: null }));
@@ -63,6 +66,19 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
                 error: err.response?.data?.detail || err.message,
                 generatingPlatforms: { ...state.generatingPlatforms, [platform]: false }
             }));
+        }
+    },
+
+    generateImage: async (topic: string) => {
+        set({ isGeneratingImage: true, error: null });
+        try {
+            const res = await axios.post(`${API_URL}/workflow/generate-image`, { prompt: topic });
+            set({ ...res.data, isGeneratingImage: false });
+        } catch (err: any) {
+            set({
+                error: err.response?.data?.detail || err.message,
+                isGeneratingImage: false
+            });
         }
     },
 
@@ -132,5 +148,15 @@ export const useWorkflowStore = create<WorkflowState>((set) => ({
         } catch (err: any) {
             set({ error: err.message, isLoading: false });
         }
+    },
+
+    generateAllCaptions: async () => {
+        const { platforms, topic, generateCaption } = useWorkflowStore.getState();
+        set({ isLoading: true });
+
+        // Run generations in parallel
+        await Promise.all(platforms.map(p => generateCaption(p, topic)));
+
+        set({ isLoading: false });
     }
 }));

@@ -116,9 +116,8 @@ def generate_image_node(state: AgentState):
     topic = state.get("topic", "")
     feedback = state.get("feedback", "")
     
-    # Simulate image generation
-    description = gemini.generate_image_description(topic, feedback)
-    image_url = mock_generate_image(description)
+    # Real image generation
+    image_url = gemini.generate_image(topic, feedback)
     
     return {
         "image_path": image_url,
@@ -193,7 +192,7 @@ workflow.add_node("publish", publish_node)
 # Start -> Parse -> Review Caption (User triggers generation manually)
 workflow.set_entry_point("parse_prompt")
 workflow.add_edge("parse_prompt", "review_caption")
-# workflow.add_edge("generate_caption", "review_caption") # Skipped for manual trigger
+# workflow.add_edge("generate_caption", "review_caption")
 
 # Review Caption interactions are handled by interrupting the graph or conditional edges based on state input?
 # With LangGraph, we can use an 'interrupt_before' logic or just have the API update the state and resume.
@@ -204,10 +203,10 @@ workflow.add_edge("parse_prompt", "review_caption")
 # We will handle the "Human in loop" by returning to the client and waiting for the next API call to trigger the next step.
 # The graph execution will be "step-by-step".
 
-workflow.add_edge("review_caption", "generate_image") # Logical next step if accepted
+# workflow.add_edge("review_caption", "generate_image") # Managed by API
 workflow.add_edge("generate_image", "review_image")
-workflow.add_edge("review_image", "schedule")
-workflow.add_edge("schedule", "publish")
+# workflow.add_edge("review_image", "schedule") # Managed by API
+# workflow.add_edge("schedule", "publish") # Managed by API
 workflow.add_edge("publish", END)
 
 # Compile
