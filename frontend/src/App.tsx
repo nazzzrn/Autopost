@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useWorkflowStore } from './store';
 import PromptStep from './components/PromptStep';
 import CaptionReview from './components/CaptionReview';
 import ImageReview from './components/ImageReview';
 import ScheduleStep from './components/ScheduleStep';
 import PublishStatus from './components/PublishStatus';
-import { LayoutDashboard, PenTool, Image as ImageIcon, Calendar, Send, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, PenTool, Image as ImageIcon, Calendar, Send } from 'lucide-react';
 
 const StepIndicator = ({ currentStep }: { currentStep: string }) => {
     const steps = [
@@ -14,7 +14,6 @@ const StepIndicator = ({ currentStep }: { currentStep: string }) => {
         { id: 'review_image', label: 'Image', icon: ImageIcon },
         { id: 'schedule', label: 'Schedule', icon: Calendar },
         { id: 'publish', label: 'Publish', icon: Send },
-        { id: 'completed', label: 'Done', icon: Send },
     ];
 
     const getStepStatus = (stepId: string) => {
@@ -28,17 +27,36 @@ const StepIndicator = ({ currentStep }: { currentStep: string }) => {
     };
 
     return (
-        <div className="flex justify-between items-center mb-10 overflow-x-auto pb-4">
-            {steps.map((step) => {
+        <div className="flex justify-center items-center mb-16 gap-4 md:gap-8 overflow-x-auto pb-4 px-2">
+            {steps.map((step, index) => {
                 const status = getStepStatus(step.id);
                 const Icon = step.icon;
                 return (
-                    <div key={step.id} className={`flex flex-col items-center min-w-[80px] ${status === 'current' ? 'text-blue-600 dark:text-blue-400 font-bold' : status === 'completed' ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${status === 'current' ? 'bg-blue-100 dark:bg-blue-900' : status === 'completed' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                            <Icon size={20} />
+                    <React.Fragment key={step.id}>
+                        <div className="flex flex-col items-center group">
+                            <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${status === 'current'
+                                ? 'bg-brand/20 border-2 border-brand text-brand shadow-[0_0_20px_rgba(0,204,180,0.4)]'
+                                : status === 'completed'
+                                    ? 'bg-brand text-pixora-bg'
+                                    : 'bg-pixora-darker-green/50 border border-pixora-border text-gray-500'
+                                }`}>
+                                <Icon size={24} className={status === 'current' ? 'animate-pulse' : ''} />
+                                {status === 'completed' && (
+                                    <div className="absolute -top-1 -right-1 bg-white text-pixora-bg rounded-full p-0.5">
+                                        <div className="w-3 h-3 bg-brand rounded-full" />
+                                    </div>
+                                )}
+                            </div>
+                            <span className={`text-xs mt-3 font-medium tracking-wider uppercase transition-colors duration-300 ${status === 'current' ? 'text-brand' : status === 'completed' ? 'text-brand/80' : 'text-gray-600'
+                                }`}>
+                                {step.label}
+                            </span>
                         </div>
-                        <span className="text-sm">{step.label}</span>
-                    </div>
+                        {index < steps.length - 1 && (
+                            <div className={`h-[2px] w-8 md:w-12 rounded-full mb-6 ${getStepStatus(steps[index + 1].id) !== 'upcoming' ? 'bg-brand/50' : 'bg-pixora-border'
+                                }`} />
+                        )}
+                    </React.Fragment>
                 );
             })}
         </div>
@@ -47,35 +65,10 @@ const StepIndicator = ({ currentStep }: { currentStep: string }) => {
 
 function App() {
     const { current_step, fetchState } = useWorkflowStore();
-    const [theme, setTheme] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                return savedTheme;
-            }
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                return 'dark';
-            }
-        }
-        return 'light';
-    });
 
     useEffect(() => {
-        const root = document.documentElement;
-        if (theme === 'dark') {
-            root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
-        }
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    };
-
-    useEffect(() => {
-        // Initial fetch to sync state on reload
+        // Force dark theme as it's the core of Pixora
+        document.documentElement.classList.add('dark');
         fetchState();
     }, []);
 
@@ -98,25 +91,32 @@ function App() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
-            <header className="bg-white dark:bg-gray-800 shadow-sm transition-colors duration-200">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <h1 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
-                        <span className="bg-blue-600 text-white p-1 rounded">CW</span> Content Workflow Agent
-                    </h1>
-                    <button
-                        onClick={toggleTheme}
-                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
-                        aria-label="Toggle theme"
-                    >
-                        {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-                    </button>
+        <div className="min-h-screen bg-pixora-bg flex flex-col selection:bg-brand/30 selection:text-brand">
+            {/* Background Glows */}
+            <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-brand/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-accent-cyan/5 blur-[100px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+            <header className="relative z-10 border-b border-pixora-border bg-pixora-bg/50 backdrop-blur-md">
+                <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(0,204,180,0.4)]">
+                            <span className="text-pixora-bg font-black text-xl">P</span>
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                                Pixora <span className="text-brand text-sm font-normal px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20">v2.0</span>
+                            </h1>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-medium">Content Automation Suite</p>
+                        </div>
+                    </div>
                 </div>
             </header>
 
-            <main className="flex-1 max-w-5xl mx-auto w-full p-6 text-gray-900 dark:text-gray-100">
+            <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full p-6 md:p-12 overflow-hidden">
                 <StepIndicator currentStep={current_step} />
-                {renderStep()}
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    {renderStep()}
+                </div>
             </main>
         </div>
     );

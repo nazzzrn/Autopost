@@ -16,64 +16,104 @@ const PublishStatus: React.FC = () => {
     const platforms = ["Instagram", "Facebook", "LinkedIn"];
 
     return (
-        <div className="max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl mt-10 transition-colors">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white flex items-center gap-2">
-                <Send /> Publishing Status
-            </h2>
+        <div className="max-w-3xl mx-auto mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="glass-card p-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-64 h-64 bg-brand/5 blur-3xl rounded-full pointer-events-none" />
 
-            <div className="space-y-4">
-                {platforms.map((platform) => {
-                    // Check if this platform was selected in the workflow
-                    // We need to access the 'platforms' from store state
-                    const isSelected = useWorkflowStore.getState().platforms.includes(platform);
-
-                    if (!isSelected) {
-                        return null; // Don't show unselected platforms
-                    }
-
-                    const status = publish_status[platform];
-                    const isPublished = status && status.includes("Published"); // Simple check
-                    const isFailed = status && status.includes("Failed");
-
-                    return (
-                        <div key={platform} className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 transition-colors">
-                            <span className="font-semibold text-gray-700 dark:text-gray-200">{platform}</span>
-
-                            {isPublished ? (
-                                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                    <CheckCircle size={20} />
-                                    <span>Success</span>
-                                </div>
-                            ) : isFailed ? (
-                                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                                    <AlertTriangle size={20} />
-                                    <span>Failed</span>
-                                </div>
-                            ) : status ? (
-                                <span className="text-gray-500 dark:text-gray-400">{status}</span>
-                            ) : (
-                                <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
-                                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <span>Pending...</span>}
-                                </div>
-                            )}
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-10">
+                        <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                            <Send size={24} />
                         </div>
-                    );
-                })}
-                {/* Fallback if no platforms selected? Should not happen if filtered correctly upstream */}
-                {useWorkflowStore.getState().platforms.length === 0 && (
-                    <div className="text-center text-gray-500 dark:text-gray-400 py-4">No platforms selected to publish.</div>
-                )}
+                        <div>
+                            <h2 className="text-3xl font-bold text-white tracking-tight">Dispatch Registry</h2>
+                            <p className="text-gray-500 text-sm mt-1 font-medium tracking-tight">Real-time monitoring of your content deployment</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {platforms.map((platform) => {
+                            const isSelected = useWorkflowStore.getState().platforms.includes(platform);
+                            if (!isSelected) return null;
+
+                            const status = publish_status[platform];
+                            const isPublished = status && status.includes("Published");
+                            const isFailed = status && status.includes("Failed");
+
+                            return (
+                                <div key={platform} className={`flex items-center justify-between p-5 rounded-2xl border transition-all duration-500 ${isPublished
+                                    ? 'bg-brand/5 border-brand/20'
+                                    : isFailed
+                                        ? 'bg-red-500/5 border-red-500/20'
+                                        : 'bg-pixora-darker-green/30 border-pixora-border/50'
+                                    }`}>
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-2 h-2 rounded-full ${isPublished ? 'bg-brand animate-pulse shadow-[0_0_8px_rgba(0,204,180,1)]' : isFailed ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,1)]' : 'bg-gray-600'
+                                            }`} />
+                                        <span className={`font-black text-xs uppercase tracking-[0.2em] ${isPublished ? 'text-brand' : isFailed ? 'text-red-400' : 'text-gray-400'}`}>
+                                            {platform}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        {isPublished ? (
+                                            <div className="flex items-center gap-2 text-brand font-bold text-[10px] tracking-widest">
+                                                <CheckCircle size={16} />
+                                                DEPLOYED
+                                            </div>
+                                        ) : isFailed ? (
+                                            <div className="flex items-center gap-2 text-red-400 font-bold text-[10px] tracking-widest">
+                                                <AlertTriangle size={16} />
+                                                ERROR
+                                            </div>
+                                        ) : status ? (
+                                            <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">{status}</span>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-gray-600 font-bold text-[10px] tracking-widest">
+                                                {isLoading ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={16} />
+                                                        <span>SYNCING...</span>
+                                                    </>
+                                                ) : (
+                                                    <span>STANDBY</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {useWorkflowStore.getState().platforms.length === 0 && (
+                            <div className="text-center p-12 glass-card border-dashed">
+                                <p className="text-gray-500 text-xs font-bold tracking-widest uppercase">No Active Channels Routed</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {current_step === "completed" && (
+                        <div className="mt-10 p-6 bg-brand text-pixora-bg rounded-2xl text-center font-black tracking-widest uppercase shadow-[0_0_30px_rgba(0,204,180,0.3)] animate-in zoom-in duration-500">
+                            Workflow Executed Successfully
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[10px] font-bold tracking-widest uppercase">
+                            SYSTEM FAULT: {error}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {current_step === "completed" && (
-                <div className="mt-8 p-4 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg text-center font-bold border border-green-200 dark:border-green-800">
-                    Workflow Completed Successfully!
-                </div>
-            )}
-
-            {error && (
-                <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md text-sm border border-red-200 dark:border-red-800">
-                    {error}
+                <div className="mt-8 flex justify-center">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="pixora-btn-secondary text-[10px] tracking-[0.3em] px-12"
+                    >
+                        INITIALIZE NEW SESSION
+                    </button>
                 </div>
             )}
         </div>
