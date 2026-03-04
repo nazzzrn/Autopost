@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWorkflowStore } from '../store';
-import { Check, RefreshCw, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Check, RefreshCw, Upload, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
 
 const ImageReview: React.FC = () => {
     const { image_path, topic, reviewImage, isLoading, error, regenerate_count_image, generateImage, isGeneratingImage } = useWorkflowStore();
@@ -10,6 +10,7 @@ const ImageReview: React.FC = () => {
 
     // Determines which image to show/use
     const currentImage = uploadedImage || image_path;
+    const hasImage = !!currentImage;
 
     const handleAccept = async () => {
         await reviewImage(true, undefined, uploadedImage || undefined);
@@ -76,7 +77,7 @@ const ImageReview: React.FC = () => {
                         </div>
                         Visual Review
                     </h2>
-                    <p className="text-gray-500 text-sm mt-1 ml-13">Finalize the creative asset for your workflow</p>
+                    <p className="text-gray-500 text-sm mt-1 ml-13">Choose to generate with AI or upload your own image</p>
                 </div>
             </div>
 
@@ -88,32 +89,65 @@ const ImageReview: React.FC = () => {
                             <div className="absolute inset-0 bg-gradient-to-t from-pixora-bg/80 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300" />
                         </div>
                     ) : (
-                        <div className="text-gray-600 flex flex-col items-center">
-                            <div className="w-20 h-20 rounded-full bg-pixora-bg border border-pixora-border flex items-center justify-center mb-4">
+                        <div className="text-gray-600 flex flex-col items-center py-8">
+                            <div className="w-20 h-20 rounded-full bg-pixora-bg border border-pixora-border flex items-center justify-center mb-6">
                                 <ImageIcon size={40} className="text-gray-700" />
                             </div>
-                            <span className="text-sm font-bold tracking-widest uppercase">No Preview Available</span>
+                            <span className="text-sm font-bold tracking-widest uppercase mb-6 text-gray-500">No Image Yet</span>
+
+                            {/* Primary actions when no image */}
+                            <div className="flex flex-col sm:flex-row gap-4 items-center">
+                                <button
+                                    onClick={() => generateImage(topic)}
+                                    disabled={isGeneratingImage}
+                                    className="pixora-btn-primary flex items-center gap-3 px-8 py-3 text-sm"
+                                >
+                                    {isGeneratingImage ? (
+                                        <>
+                                            <Loader2 className="animate-spin" size={18} />
+                                            <span>GENERATING...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles size={18} />
+                                            <span>GENERATE WITH AI</span>
+                                        </>
+                                    )}
+                                </button>
+
+                                <span className="text-gray-600 text-xs font-bold tracking-widest uppercase">OR</span>
+
+                                <label className="pixora-btn-secondary flex items-center gap-2 cursor-pointer px-8 py-3 text-sm">
+                                    <Upload size={16} />
+                                    UPLOAD IMAGE
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                                </label>
+                            </div>
                         </div>
                     )}
 
-                    {/* Overlay for upload */}
-                    <div className="absolute inset-0 bg-pixora-bg/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                        <label className="cursor-pointer bg-brand text-pixora-bg px-6 py-3 rounded-full font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(0,204,180,0.4)]">
-                            <Upload size={16} />
-                            REPLACE IMAGE
-                            <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                        </label>
-                    </div>
+                    {/* Overlay for replacing image (only when image exists) */}
+                    {currentImage && (
+                        <div className="absolute inset-0 bg-pixora-bg/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                            <label className="cursor-pointer bg-brand text-pixora-bg px-6 py-3 rounded-full font-black text-xs tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(0,204,180,0.4)]">
+                                <Upload size={16} />
+                                REPLACE IMAGE
+                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                            </label>
+                        </div>
+                    )}
                 </div>
 
-                <div className="absolute top-6 left-6 flex gap-2">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-tighter uppercase ${uploadedImage ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30' : 'bg-brand/20 text-brand border border-brand/30'}`}>
-                        {uploadedImage ? "User Upload" : "AI Generated"}
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-white/5 text-white/40 border border-white/10 text-[10px] font-bold tracking-tighter uppercase backdrop-blur-md">
-                        Flux-1 Schnell
-                    </span>
-                </div>
+                {currentImage && (
+                    <div className="absolute top-6 left-6 flex gap-2">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-tighter uppercase ${uploadedImage ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30' : 'bg-brand/20 text-brand border border-brand/30'}`}>
+                            {uploadedImage ? "User Upload" : "AI Generated"}
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-white/5 text-white/40 border border-white/10 text-[10px] font-bold tracking-tighter uppercase backdrop-blur-md">
+                            Flux-1 Schnell
+                        </span>
+                    </div>
+                )}
             </div>
 
             {error && (
@@ -125,7 +159,7 @@ const ImageReview: React.FC = () => {
             <div className="sticky bottom-8 z-20 flex justify-between items-center glass-card p-4 px-6 border-brand/20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
                 <button
                     onClick={() => setShowReject(true)}
-                    disabled={isLoading || regenerate_count_image >= 3}
+                    disabled={isLoading || regenerate_count_image >= 3 || !hasImage}
                     className="flex items-center gap-2 text-red-400 text-xs font-black tracking-widest hover:text-red-300 transition-colors disabled:opacity-30"
                 >
                     <RefreshCw size={16} />
@@ -133,14 +167,16 @@ const ImageReview: React.FC = () => {
                 </button>
 
                 <div className="flex gap-4">
-                    <button
-                        onClick={() => generateImage(topic)}
-                        disabled={isLoading || isGeneratingImage}
-                        className="pixora-btn-secondary flex items-center gap-2 px-6"
-                    >
-                        {isGeneratingImage ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
-                        <span className="text-xs">REGENERATE</span>
-                    </button>
+                    {hasImage && (
+                        <button
+                            onClick={() => generateImage(topic)}
+                            disabled={isLoading || isGeneratingImage}
+                            className="pixora-btn-secondary flex items-center gap-2 px-6"
+                        >
+                            {isGeneratingImage ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                            <span className="text-xs">REGENERATE</span>
+                        </button>
+                    )}
 
                     <button
                         onClick={handleAccept}

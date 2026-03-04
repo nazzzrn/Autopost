@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
 import { useWorkflowStore } from '../store';
-import { CheckCircle, Loader2, Send, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Loader2, Send, AlertTriangle, Clock } from 'lucide-react';
 
 const PublishStatus: React.FC = () => {
     const { publish, publish_status, isLoading, error, current_step } = useWorkflowStore();
     const hasPublished = React.useRef(false);
 
     useEffect(() => {
-        if (current_step === "publish" && !hasPublished.current) {
+        // Only auto-publish if we're in "publish" step AND no status yet
+        // (If status already has "Scheduled", don't publish — it was a future schedule)
+        const hasExistingStatus = Object.keys(publish_status).length > 0;
+        if (current_step === "publish" && !hasPublished.current && !hasExistingStatus) {
             hasPublished.current = true;
             publish();
         }
@@ -39,18 +42,21 @@ const PublishStatus: React.FC = () => {
                             const status = publish_status[platform];
                             const isPublished = status && status.includes("Published");
                             const isFailed = status && status.includes("Failed");
+                            const isScheduled = status && status.includes("Scheduled");
 
                             return (
                                 <div key={platform} className={`flex items-center justify-between p-5 rounded-2xl border transition-all duration-500 ${isPublished
                                     ? 'bg-brand/5 border-brand/20'
                                     : isFailed
                                         ? 'bg-red-500/5 border-red-500/20'
-                                        : 'bg-pixora-darker-green/30 border-pixora-border/50'
+                                        : isScheduled
+                                            ? 'bg-blue-500/5 border-blue-500/20'
+                                            : 'bg-pixora-darker-green/30 border-pixora-border/50'
                                     }`}>
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-2 h-2 rounded-full ${isPublished ? 'bg-brand animate-pulse shadow-[0_0_8px_rgba(0,204,180,1)]' : isFailed ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,1)]' : 'bg-gray-600'
+                                        <div className={`w-2 h-2 rounded-full ${isPublished ? 'bg-brand animate-pulse shadow-[0_0_8px_rgba(0,204,180,1)]' : isFailed ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,1)]' : isScheduled ? 'bg-blue-400 animate-pulse shadow-[0_0_8px_rgba(96,165,250,1)]' : 'bg-gray-600'
                                             }`} />
-                                        <span className={`font-black text-xs uppercase tracking-[0.2em] ${isPublished ? 'text-brand' : isFailed ? 'text-red-400' : 'text-gray-400'}`}>
+                                        <span className={`font-black text-xs uppercase tracking-[0.2em] ${isPublished ? 'text-brand' : isFailed ? 'text-red-400' : isScheduled ? 'text-blue-400' : 'text-gray-400'}`}>
                                             {platform}
                                         </span>
                                     </div>
@@ -60,6 +66,11 @@ const PublishStatus: React.FC = () => {
                                             <div className="flex items-center gap-2 text-brand font-bold text-[10px] tracking-widest">
                                                 <CheckCircle size={16} />
                                                 DEPLOYED
+                                            </div>
+                                        ) : isScheduled ? (
+                                            <div className="flex items-center gap-2 text-blue-400 font-bold text-[10px] tracking-widest">
+                                                <Clock size={16} />
+                                                SCHEDULED
                                             </div>
                                         ) : isFailed ? (
                                             <div className="flex items-center gap-2 text-red-400 font-bold text-[10px] tracking-widest">
@@ -109,7 +120,12 @@ const PublishStatus: React.FC = () => {
             {current_step === "completed" && (
                 <div className="mt-8 flex justify-center">
                     <button
-                        onClick={() => window.location.reload()}
+                        onClick={async () => {
+                            try {
+                                await fetch('http://localhost:8000/workflow/reset', { method: 'POST' });
+                            } catch (e) { /* ignore */ }
+                            window.location.href = '/';
+                        }}
                         className="pixora-btn-secondary text-[10px] tracking-[0.3em] px-12"
                     >
                         INITIALIZE NEW SESSION

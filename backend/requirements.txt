@@ -7,3 +7,6 @@ requests
 python-multipart
 pydantic
 google-generativeai
+sqlalchemy
+aiosqlite
+apscheduler

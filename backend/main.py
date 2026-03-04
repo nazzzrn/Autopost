@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -20,8 +21,23 @@ logger = logging.getLogger(__name__)
 
 from models import StartWorkflowRequest, ReviewCaptionRequest, ReviewImageRequest, ScheduleRequest, WorkflowState
 from agent_workflow import app as workflow_app, AgentState
+from database import init_db
+from scheduler_service import start_scheduler, stop_scheduler
+from routers import posts as posts_router, analytics as analytics_router
 
-app = FastAPI(title="Content Workflow Automation Agent")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown lifecycle."""
+    logger.info("Starting up — initializing DB and scheduler...")
+    await init_db()
+    start_scheduler()
+    yield
+    logger.info("Shutting down — stopping scheduler...")
+    stop_scheduler()
+
+
+app = FastAPI(title="Content Workflow Automation Agent", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +46,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount new routers
+app.include_router(posts_router.router)
+app.include_router(analytics_router.router)
 
 # In-memory storage for state (Single user = single state for simplicity)
 # In a real multi-user app, use a database or session-dict.
@@ -78,6 +98,26 @@ async def start_workflow(request: StartWorkflowRequest):
 async def get_state():
     return current_state
 
+@app.post("/workflow/reset")
+async def reset_workflow():
+    global current_state
+    current_state = {
+        "topic": "",
+        "platforms": [],
+        "captions": {},
+        "image_path": None,
+        "schedule_time": None,
+        "publish_status": {},
+        "feedback": "",
+        "regenerate_count_caption": 0,
+        "regenerate_count_image": 0,
+        "current_step": "prompt",
+        "caption_options": {},
+        "error": None,
+    }
+    logger.info("Workflow state reset to initial.")
+    return current_state
+
 class GenerateCaptionRequest(BaseModel):
     platform: str
     topic: str
@@ -104,12 +144,9 @@ async def review_caption(request: ReviewCaptionRequest):
     global current_state
     
     if request.accepted:
-        # Move to Image Generation
-        from agent_workflow import generate_image_node
-        current_state["captions"] = request.captions # Update with any edits
-        
-        res_img = generate_image_node(current_state)
-        current_state.update(res_img)
+        # Move to Image Review WITHOUT auto-generating an image.
+        # User can generate via button or upload manually.
+        current_state["captions"] = request.captions  # Update with any edits
         current_state["current_step"] = "review_image"
     else:
         # Regenerate
@@ -120,7 +157,7 @@ async def review_caption(request: ReviewCaptionRequest):
         from agent_workflow import generate_caption_node
         res_cap = generate_caption_node(current_state)
         current_state.update(res_cap)
-        current_state["current_step"] = "review_caption" # Stay here
+        current_state["current_step"] = "review_caption"  # Stay here
         
     return current_state
 
@@ -161,28 +198,71 @@ async def review_image(request: ReviewImageRequest):
 @app.post("/workflow/schedule")
 async def schedule(request: ScheduleRequest):
     global current_state
+    from datetime import datetime
+    from database import async_session
+    from db_models import Post, PostStatus, PlatformEnum
+
     current_state["schedule_time"] = request.schedule_time.isoformat()
-    # Move to Publish
-    # Actually wait for explicit "Publish" action or do it now?
-    # Logic: UI has "Publish" button on Schedule page?
-    # Let's assume this saves the time and moves to "ready to publish" state or publishes.
-    # The prompt says "Sequential Publishing Stage" follows Schedule.
-    
-    # Let's update state to 'publishing' and trigger publish immediately 
-    # or return state so frontend calls /publish
-    
-    current_state["current_step"] = "publish"
+    # Use naive local time — browser sends local time without tz info,
+    # and the server clock is also local, so they match.
+    schedule_dt = request.schedule_time.replace(tzinfo=None)
+    now = datetime.now()
+
+    if schedule_dt > now:
+        # Future time — save to DB as 'scheduled', the scheduler will publish later
+        async with async_session() as session:
+            for platform in current_state.get("platforms", []):
+                p_enum = PlatformEnum.instagram if platform.lower() == "instagram" else PlatformEnum.facebook
+                post = Post(
+                    platform=p_enum,
+                    caption=current_state.get("captions", {}).get(platform, ""),
+                    image_url=current_state.get("image_path"),
+                    status=PostStatus.scheduled,
+                    scheduled_time=schedule_dt,
+                )
+                session.add(post)
+            await session.commit()
+
+        current_state["publish_status"] = {p: "Scheduled" for p in current_state.get("platforms", [])}
+        current_state["current_step"] = "completed"
+        logger.info(f"Posts scheduled for {schedule_dt.isoformat()} (local time) and saved to DB.")
+    else:
+        # Past or now — publish immediately
+        current_state["current_step"] = "publish"
+
     return current_state
+
 
 @app.post("/workflow/publish")
 async def publish():
     global current_state
-    
+    from datetime import datetime, timezone
+    from database import async_session
+    from db_models import Post, PostStatus, PlatformEnum
+
     from agent_workflow import publish_node
     res_pub = publish_node(current_state)
     current_state.update(res_pub)
     current_state["current_step"] = "completed"
-    
+
+    # Save published posts to DB so they show in the calendar
+    async with async_session() as session:
+        for platform, status_msg in current_state.get("publish_status", {}).items():
+            p_lower = platform.lower()
+            if p_lower in ("instagram", "facebook"):
+                p_enum = PlatformEnum(p_lower)
+                post = Post(
+                    platform=p_enum,
+                    caption=current_state.get("captions", {}).get(platform, ""),
+                    image_url=current_state.get("image_path"),
+                    status=PostStatus.published if "Published" in status_msg else PostStatus.failed,
+                    published_time=datetime.now(timezone.utc) if "Published" in status_msg else None,
+                    scheduled_time=datetime.fromisoformat(current_state["schedule_time"]) if current_state.get("schedule_time") else datetime.now(timezone.utc),
+                )
+                session.add(post)
+        await session.commit()
+    logger.info("Published posts saved to DB.")
+
     return current_state
 
 if __name__ == "__main__":

@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
+import { Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import { useWorkflowStore } from './store';
 import PromptStep from './components/PromptStep';
 import CaptionReview from './components/CaptionReview';
 import ImageReview from './components/ImageReview';
 import ScheduleStep from './components/ScheduleStep';
 import PublishStatus from './components/PublishStatus';
-import { LayoutDashboard, PenTool, Image as ImageIcon, Calendar, Send } from 'lucide-react';
+import CalendarPage from './pages/CalendarPage';
+import DashboardPage from './pages/DashboardPage';
+import { LayoutDashboard, PenTool, Image as ImageIcon, Calendar, Send, BarChart3, Zap } from 'lucide-react';
 
 const StepIndicator = ({ currentStep }: { currentStep: string }) => {
     const steps = [
@@ -63,12 +66,11 @@ const StepIndicator = ({ currentStep }: { currentStep: string }) => {
     );
 };
 
-function App() {
+// Workflow page — preserves the existing step-by-step flow exactly
+const WorkflowPage: React.FC = () => {
     const { current_step, fetchState } = useWorkflowStore();
 
     useEffect(() => {
-        // Force dark theme as it's the core of Pixora
-        document.documentElement.classList.add('dark');
         fetchState();
     }, []);
 
@@ -91,6 +93,29 @@ function App() {
     };
 
     return (
+        <>
+            <StepIndicator currentStep={current_step} />
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {renderStep()}
+            </div>
+        </>
+    );
+};
+
+const navItems = [
+    { to: '/', label: 'Workflow', icon: Zap },
+    { to: '/calendar', label: 'Calendar', icon: Calendar },
+    { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+];
+
+function App() {
+    const location = useLocation();
+
+    useEffect(() => {
+        document.documentElement.classList.add('dark');
+    }, []);
+
+    return (
         <div className="min-h-screen bg-pixora-bg flex flex-col selection:bg-brand/30 selection:text-brand">
             {/* Background Glows */}
             <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-brand/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
@@ -109,14 +134,36 @@ function App() {
                             <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-medium">Content Automation Suite</p>
                         </div>
                     </div>
+
+                    {/* Navigation */}
+                    <nav className="flex items-center gap-1 bg-pixora-darker-green/50 border border-pixora-border rounded-2xl p-1.5">
+                        {navItems.map(item => {
+                            const Icon = item.icon;
+                            const isActive = location.pathname === item.to;
+                            return (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${isActive
+                                        ? 'bg-brand/15 text-brand border border-brand/20 shadow-[0_0_10px_rgba(0,204,180,0.15)]'
+                                        : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                                        }`}
+                                >
+                                    <Icon size={14} />
+                                    <span className="hidden md:inline">{item.label}</span>
+                                </NavLink>
+                            );
+                        })}
+                    </nav>
                 </div>
             </header>
 
             <main className="relative z-10 flex-1 max-w-6xl mx-auto w-full p-6 md:p-12 overflow-hidden">
-                <StepIndicator currentStep={current_step} />
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    {renderStep()}
-                </div>
+                <Routes>
+                    <Route path="/" element={<WorkflowPage />} />
+                    <Route path="/calendar" element={<CalendarPage />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                </Routes>
             </main>
         </div>
     );
