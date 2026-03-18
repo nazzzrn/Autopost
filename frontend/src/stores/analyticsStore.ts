@@ -16,6 +16,8 @@ interface AnalyticsEntry {
     reach: number;
     impressions: number;
     engagement: number;
+    likes: number;
+    comments: number;
     engagement_rate: number;
     fetched_at: string;
     post?: {
@@ -47,6 +49,7 @@ interface AnalyticsState {
     fetchPostAnalytics: () => Promise<void>;
     fetchTimeseries: () => Promise<void>;
     refreshData: () => Promise<void>;
+    deletePost: (postId: string) => Promise<void>;
 }
 
 export const useAnalyticsStore = create<AnalyticsState>((set) => ({
@@ -92,6 +95,19 @@ export const useAnalyticsStore = create<AnalyticsState>((set) => ({
         try {
             const res = await axios.post(`${API_URL}/analytics/refresh`);
             set({ platformInsights: res.data, isLoading: false });
+        } catch (err: any) {
+            set({ error: err.response?.data?.detail || err.message, isLoading: false });
+        }
+    },
+
+    deletePost: async (postId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            await axios.delete(`${API_URL}/analytics/posts/${postId}`);
+            set((state) => ({
+                postAnalytics: state.postAnalytics.filter(p => p.post_id !== postId),
+                isLoading: false
+            }));
         } catch (err: any) {
             set({ error: err.response?.data?.detail || err.message, isLoading: false });
         }

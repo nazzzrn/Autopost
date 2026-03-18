@@ -50,6 +50,7 @@ class Post(Base):
     published_time = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+    platform_post_id = Column(String, nullable=True)  # new field
 
     # Relationship
     analytics = relationship("Analytics", back_populates="post", cascade="all, delete-orphan")
@@ -64,6 +65,7 @@ class Post(Base):
             "status": self.status.value if self.status else None,
             "scheduled_time": self.scheduled_time.isoformat() if self.scheduled_time else None,
             "published_time": self.published_time.isoformat() if self.published_time else None,
+            "platform_post_id": self.platform_post_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -77,6 +79,8 @@ class Analytics(Base):
     reach = Column(Integer, default=0)
     impressions = Column(Integer, default=0)
     engagement = Column(Integer, default=0)
+    likes = Column(Integer, default=0)
+    comments = Column(Integer, default=0)
     engagement_rate = Column(Float, default=0.0)
     fetched_at = Column(DateTime(timezone=True), default=_utcnow)
 
@@ -90,6 +94,8 @@ class Analytics(Base):
             "reach": self.reach,
             "impressions": self.impressions,
             "engagement": self.engagement,
+            "likes": self.likes,
+            "comments": self.comments,
             "engagement_rate": self.engagement_rate,
             "fetched_at": self.fetched_at.isoformat() if self.fetched_at else None,
         }

@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
     BarChart3, TrendingUp, Eye, Activity, RefreshCw, Loader2,
-    Award, Instagram, Facebook
+    Award, Instagram, Facebook, Trash2
 } from 'lucide-react';
 
 const KPICard: React.FC<{
@@ -106,50 +106,64 @@ const DashboardPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Platform API Data */}
-            {platformInsights && (
-                <div className="mb-8 glass-card p-6 border-brand/10">
-                    <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">Live Platform Data</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 rounded-xl bg-pixora-darker-green/50 border border-pixora-border">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Facebook size={16} className="text-blue-400" />
-                                <span className="text-xs font-bold uppercase tracking-widest text-blue-400">Facebook</span>
-                            </div>
-                            {platformInsights.facebook.error ? (
-                                <p className="text-gray-500 text-xs">{platformInsights.facebook.error}</p>
-                            ) : (
-                                <div className="space-y-1">
-                                    {Object.entries(platformInsights.facebook).map(([k, v]) => (
-                                        <div key={k} className="flex justify-between text-xs">
-                                            <span className="text-gray-400">{k.replace(/_/g, ' ')}</span>
-                                            <span className="text-white font-mono">{String(v)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+            {/* Platform Data */}
+            <div className="mb-8 glass-card p-6 border-brand/10">
+                <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-4">Platform Overview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-pixora-darker-green/50 border border-pixora-border">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Facebook size={16} className="text-blue-400" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-blue-400">Facebook</span>
                         </div>
-                        <div className="p-4 rounded-xl bg-pixora-darker-green/50 border border-pixora-border">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Instagram size={16} className="text-pink-400" />
-                                <span className="text-xs font-bold uppercase tracking-widest text-pink-400">Instagram</span>
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">Total Likes</span>
+                                <span className="text-white font-mono">
+                                    {postAnalytics.filter(p => p.post?.platform === 'facebook').reduce((acc, p) => acc + (p.likes || 0), 0).toLocaleString()}
+                                </span>
                             </div>
-                            {platformInsights.instagram.error ? (
-                                <p className="text-gray-500 text-xs">{platformInsights.instagram.error}</p>
-                            ) : (
-                                <div className="space-y-1">
-                                    {Object.entries(platformInsights.instagram).map(([k, v]) => (
-                                        <div key={k} className="flex justify-between text-xs">
-                                            <span className="text-gray-400">{k.replace(/_/g, ' ')}</span>
-                                            <span className="text-white font-mono">{String(v)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">Total Comments</span>
+                                <span className="text-white font-mono">
+                                    {postAnalytics.filter(p => p.post?.platform === 'facebook').reduce((acc, p) => acc + (p.comments || 0), 0).toLocaleString()}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">Total Engagement</span>
+                                <span className="text-white font-mono">
+                                    {postAnalytics.filter(p => p.post?.platform === 'facebook').reduce((acc, p) => acc + (p.engagement || 0), 0).toLocaleString()}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-pixora-darker-green/50 border border-pixora-border">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Instagram size={16} className="text-pink-400" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-pink-400">Instagram</span>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">Total Likes</span>
+                                <span className="text-white font-mono">
+                                    {postAnalytics.filter(p => p.post?.platform === 'instagram').reduce((acc, p) => acc + (p.likes || 0), 0).toLocaleString()}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">Total Comments</span>
+                                <span className="text-white font-mono">
+                                    {postAnalytics.filter(p => p.post?.platform === 'instagram').reduce((acc, p) => acc + (p.comments || 0), 0).toLocaleString()}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">Total Engagement</span>
+                                <span className="text-white font-mono">
+                                    {postAnalytics.filter(p => p.post?.platform === 'instagram').reduce((acc, p) => acc + (p.engagement || 0), 0).toLocaleString()}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -244,10 +258,18 @@ const DashboardPage: React.FC = () => {
                             <p className="text-white text-sm leading-relaxed mb-3">
                                 {bestPost.post.caption?.substring(0, 120)}{bestPost.post.caption && bestPost.post.caption.length > 120 ? '...' : ''}
                             </p>
-                            <div className="flex gap-6">
+                            <div className="flex gap-6 flex-wrap">
                                 <div>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block">Engagement Rate</span>
                                     <span className="text-brand font-black text-lg">{bestPost.engagement_rate.toFixed(1)}%</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block">Likes</span>
+                                    <span className="text-white font-bold text-lg">{bestPost.likes?.toLocaleString() || 0}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block">Comments</span>
+                                    <span className="text-white font-bold text-lg">{bestPost.comments?.toLocaleString() || 0}</span>
                                 </div>
                                 <div>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block">Reach</span>
@@ -259,6 +281,58 @@ const DashboardPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Posts Performance Table */}
+            {postAnalytics.length > 0 && (
+                <div className="glass-card p-6 overflow-hidden mb-8 border-brand/10">
+                    <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-500 mb-6">Recent Posts Performance</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-gray-400">
+                            <thead className="text-[10px] text-gray-500 uppercase bg-pixora-darker-green/20 border-b border-pixora-border/50">
+                                <tr>
+                                    <th className="px-4 py-4 font-bold tracking-[0.2em] w-1/3">Post Info</th>
+                                    <th className="px-4 py-4 font-bold tracking-[0.2em]">Platform</th>
+                                    <th className="px-4 py-4 font-bold tracking-[0.2em]">Likes</th>
+                                    <th className="px-4 py-4 font-bold tracking-[0.2em]">Comments</th>
+                                    <th className="px-4 py-4 font-bold tracking-[0.2em]">Reach</th>
+                                    <th className="px-4 py-4 font-bold tracking-[0.2em]">Eng. Rate</th>
+                                    <th className="px-4 py-4 font-bold tracking-[0.2em] text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {postAnalytics.slice(0, 5).map((pa) => (
+                                    <tr key={pa.id} className="border-b border-pixora-border/30 hover:bg-white/5 transition-colors">
+                                        <td className="px-4 py-3 flex items-center gap-3">
+                                            {pa.post?.image_url && (
+                                                <img src={pa.post.image_url} alt="post" className="w-10 h-10 rounded-lg object-cover border border-pixora-border flex-shrink-0" />
+                                            )}
+                                            <span className="text-white truncate max-w-[200px]">{pa.post?.caption || 'No caption'}</span>
+                                        </td>
+                                        <td className="px-4 py-3 capitalize text-white">{pa.post?.platform || '-'}</td>
+                                        <td className="px-4 py-3 text-white font-medium">{pa.likes?.toLocaleString() || 0}</td>
+                                        <td className="px-4 py-3 text-white font-medium">{pa.comments?.toLocaleString() || 0}</td>
+                                        <td className="px-4 py-3">{pa.reach?.toLocaleString() || 0}</td>
+                                        <td className="px-4 py-3 text-brand font-bold">{pa.engagement_rate?.toFixed(1)}%</td>
+                                        <td className="px-4 py-3 text-right">
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm('Are you sure you want to permanently delete this post?')) {
+                                                        useAnalyticsStore.getState().deletePost(pa.post_id);
+                                                    }
+                                                }}
+                                                className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors inline-flex items-center justify-center"
+                                                title="Delete Post"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}

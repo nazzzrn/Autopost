@@ -13,7 +13,7 @@ class GeminiService:
     def __init__(self):
         try:
             genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-            self.model = genai.GenerativeModel('gemini-2.5-flash-lite')
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
             logger.info("GeminiService: Configured successfully.")
         except Exception as e:
             logger.error(f"GeminiService: Error configuring Gemini: {e}")
@@ -271,7 +271,7 @@ class InstagramService:
             
             if "id" in pub_result:
                 logger.info(f"InstagramService: Successfully published. ID: {pub_result['id']}")
-                return "Published to Instagram"
+                return f"Published:{pub_result['id']}"
             else:
                 logger.error(f"InstagramService: Failed to publish. Response: {pub_result}")
                 return "Failed: Could not publish media"
@@ -367,7 +367,7 @@ class FacebookService:
             
             if "id" in result:
                 logger.info(f"FacebookService: Successfully published. ID: {result['id']}")
-                return "Published to Facebook"
+                return f"Published:{result['id']}"
             else:
                 logger.error(f"FacebookService: Failed to publish. Response: {result}")
                 return "Failed: Could not publish"

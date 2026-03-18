@@ -251,13 +251,25 @@ async def publish():
             p_lower = platform.lower()
             if p_lower in ("instagram", "facebook"):
                 p_enum = PlatformEnum(p_lower)
+                
+                # Parse the ID if available
+                platform_post_id = None
+                is_published = False
+                if isinstance(status_msg, str) and status_msg.startswith("Published"):
+                    is_published = True
+                    if status_msg.startswith("Published:"):
+                        parts = status_msg.split(":", 1)
+                        if len(parts) > 1:
+                            platform_post_id = parts[1]
+
                 post = Post(
                     platform=p_enum,
                     caption=current_state.get("captions", {}).get(platform, ""),
                     image_url=current_state.get("image_path"),
-                    status=PostStatus.published if "Published" in status_msg else PostStatus.failed,
-                    published_time=datetime.now(timezone.utc) if "Published" in status_msg else None,
+                    status=PostStatus.published if is_published else PostStatus.failed,
+                    published_time=datetime.now(timezone.utc) if is_published else None,
                     scheduled_time=datetime.fromisoformat(current_state["schedule_time"]) if current_state.get("schedule_time") else datetime.now(timezone.utc),
+                    platform_post_id=platform_post_id
                 )
                 session.add(post)
         await session.commit()
